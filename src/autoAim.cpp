@@ -1,11 +1,7 @@
 #include "AutoAim.h"
 #include "MouseController.hpp"
-static constexpr int NEAR_DIST = 5;
-static constexpr float MOUSE_SPEED = 2.4f;
-static constexpr float FIELD_ANGLE = 17.0f; // Valorant's field of view (640x640 in 2560x1440)
-static constexpr float PIXELS_PER_ANGLE = 145.8f; // when sensitivity = 0.1
-static constexpr float DEFAULT_SENSITIVITY = 0.1f;
-static constexpr float DEFAULT_CAPTURE_SIZE = 640.0f;
+#include "GameSettings.hpp"
+#include <numbers>
 
 /**
  * @brief controls mouse movement and auto-fires
@@ -16,26 +12,26 @@ static constexpr float DEFAULT_CAPTURE_SIZE = 640.0f;
  *
  * @param x Horizontal offset on screen.
  * @param y Vertical offset on screen.
- * @param game_sensitivity In-game sensitivity setting.
+ * @param sensitivity In-game sensitivity setting.
+ * @param settings
  */
-static void control_mouse(const float x, const float y, const float game_sensitivity) {
-    const float sensitivity_modification = DEFAULT_SENSITIVITY / game_sensitivity;
+static void controlMouse(const float x, const float y,
+                         const GameSettings &settings, const float sensitivity) {
+    auto &[speed, default_sensitivity, field_radian, pixels_per_radian] = settings;
+    const float modification = default_sensitivity / sensitivity;
+
     const MouseController &mouse = MouseController::getInstance();
 
     static bool aim = true;
     if (aim) {
         if (std::sqrt(x * x + y * y) <= NEAR_DIST) {
-            mouse.MoveRelative(static_cast<int>(x * MOUSE_SPEED * sensitivity_modification),
-                               static_cast<int>(y * MOUSE_SPEED * sensitivity_modification));
+            mouse.MoveRelative(static_cast<int>(x * speed * modification),
+                               static_cast<int>(y * speed * modification));
         } else {
             aim = false;
-            constexpr float PI = 3.141592;
-            const float pixels_per_angle = PIXELS_PER_ANGLE * sensitivity_modification;
-            const float pixels_per_radian = pixels_per_angle / PI * 180.0f;
-            const float dep = DEFAULT_CAPTURE_SIZE / 2.0f / std::tan(FIELD_ANGLE * PI / 180.0f);
-
-            mouse.MoveRelative(static_cast<int>(std::atan(x / dep) * pixels_per_radian),
-                               static_cast<int>(std::atan(y / dep) * pixels_per_radian));
+            const float dep = DEFAULT_CAPTURE_SIZE / std::tan(field_radian);
+            mouse.MoveRelative(static_cast<int>(std::atan(x / dep) * pixels_per_radian * modification),
+                               static_cast<int>(std::atan(y / dep) * pixels_per_radian * modification));
         }
     } else aim = true;
 
@@ -48,11 +44,12 @@ static void control_mouse(const float x, const float y, const float game_sensiti
  * @param detection Detection results containing boxes, labels, and valid indices.
  * @param cx Screen center X coordinate.
  * @param cy Screen center Y coordinate.
+ * @param settings
  * @param target The specific class ID to aim at.
- * @param game_sensitivity Mouse sensitivity setting in the game.
+ * @param sensitivity Mouse sensitivity setting in the game.
  */
-void auto_aim(const Detection &detection, const int cx, const int cy,
-    const int target, const float game_sensitivity) {
+void autoAim(const Detection &detection, const int cx, const int cy,
+             const GameSettings &settings, const int target, const float sensitivity) {
     int nearest = -1;
     int nearest_dist2 = 0x7fffffff;
     float x = 0, y = 0;
@@ -72,5 +69,5 @@ void auto_aim(const Detection &detection, const int cx, const int cy,
         }
     }
 
-    if (~nearest) control_mouse(x, y, game_sensitivity);
+    if (~nearest) controlMouse(x, y, settings, sensitivity);
 }

@@ -3,18 +3,22 @@
 
 #include "ScreenCapture.hpp"
 #include "onnxDetector.hpp"
+#include "GameSettings.hpp"
 #include "AutoAim.h"
 
 static constexpr int CAPTURE_SIZE = 640;
 
-enum target { head = 0, enemy = 1 };
-
 void process_args(const int argc, char **argv,
-                  std::wstring &model_path,
-                  float &sensitivity) {
-    if (argc <= 2) throw std::runtime_error("Usage: [model] [sensitivity]");
-    model_path = std::wstring(argv[1], argv[1] + strlen(argv[1]));
-    sensitivity = std::stof(argv[2]);
+                  GameSettings &settings,
+                  int &target,
+                  float &sensitivity,
+                  std::wstring &model_path) {
+    if (argc < 5) throw std::invalid_argument("Invalid arguments");
+
+    settings = GameSettings::getSettings(std::stoi(argv[1]));
+    target = std::stoi(argv[2]);
+    sensitivity = std::stof(argv[3]);
+    model_path = std::wstring(argv[4], argv[4] + strlen(argv[4]));
 }
 
 
@@ -28,7 +32,6 @@ public:
 
     void finish() {
         count++;
-        if (count < 50) return;
         const auto end = std::chrono::high_resolution_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::duration<double> >(end - start).count();
         const double fps = 1.0 / duration * count;
@@ -39,9 +42,12 @@ public:
 };
 
 [[noreturn]] int main(int argc, char **argv) {
-    std::wstring model;
+    // arguments
+    int target;
     float sensitivity;
-    process_args(argc, argv, model, sensitivity);
+    std::wstring model;
+    GameSettings settings{};
+    process_args(argc, argv, settings, target, sensitivity, model);
 
     //  onnx runtime detector
     Detection detection;
@@ -52,12 +58,10 @@ public:
     ScreenCapture &capture = ScreenCapture::getInstance(detector.getInputWidth(), detector.getInputHeight());
 
     Timer timer;
-
-    // capture.CaptureFrame(frame);
     while (true) {
         if (!capture.CaptureFrame(frame)) continue;
         detector.infer(frame, detection);
-        auto_aim(detection, CAPTURE_SIZE / 2, CAPTURE_SIZE / 2, head, sensitivity);
+        autoAim(detection, CAPTURE_SIZE / 2, CAPTURE_SIZE / 2, settings, target, sensitivity);
         timer.finish();
     }
 }

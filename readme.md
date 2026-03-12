@@ -1,4 +1,4 @@
-# AImer
+# AImer - AI-Assisted Aiming Learning Project Based on Computer Vision Object Detection
 
 ## Disclaimer
 
@@ -10,15 +10,12 @@
 ## Introduction
 
 **_AImer_** is an aim-assist project based on computer vision object detection,
-currently applicable to the game ***Valorant***.
+currently applicable to the game ***Valorant, CS2, Global Strike***.
 
 ### Performance
 
-- Inference is accelerated using a GPU, which competes for resources with the game.
+- GPU-accelerated inference competes with the game for computational resources.
   The actual inference efficiency depends on your hardware performance.
-
-- ***Please ensure V-Sync is turned OFF!!!*** Otherwise,
-  the aim-assist crosshair will shake significantly.
 
 NOTE:  Maxing out inference FPS can backfire. If it's too fast for the recoil recovery,
 the script will over-correct and pull your crosshair down, causing you to whiff.
@@ -39,18 +36,38 @@ To fix this, comment out the auto-fire code in `autoAim.cpp` and handle the shoo
 1. The target platform for this project is `Windows 11` with `NVIDIA` GPUs for accelerated inference.
    GPUs from other manufacturers are currently unsupported. Other Windows versions have not been tested.
 
-2. This project currently supports only ***Valorant***. Tested settings include:
-    - Sensitivity: *0.1*
-    - Simulated Mouse: Logitech (see [Dependencies Installation](#dependencies-installation))
-    - Screen Resolution: $2560\times 1440$
-    - Capture Area: Center $640\times640$ of the screen
+2. This project simulates a Logitech mouse (see [Dependencies-Installation](#dependencies-installation)),
+   with a screen resolution of $2560\times 1440$, capturing the center $640\times640$ region of the screen.
+   **Notes:**
+    - Default sensitivity may vary depending on the simulated mouse driver
+    - The FOV for screen capture may differ across resolutions
+
+3. Currently supported games and recommended settings are as follows
+
+   | # | Game          | Mouse Sensitivity           | V-Sync |
+   |---|---------------|-----------------------------|--------|
+   | 0 | Valorant      | 0.1                         | Off    |
+   | 1 | CS2           | 1.0                         | Off    |
+   | 2 | Global Strike | 10, disable mouse smoothing | On     |
 
    **Notes:**
-    - Field of View (FOV) may vary across different games.
-    - Default sensitivity for simulated mouse drivers may differ.
     - Different sensitivities may not scale ideally under the same simulated input.
-    - Other games and configurations have not been tested. For adaptation requests, please contact the author
-      at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
+      If performance doesn't meet expectations, try the settings above
+    - Different game engines handle mouse input differently.
+      If the crosshair wobbles near the target, try enabling/disabling V-Sync
+
+4. Currently supported models
+
+   | # | Game          | Model             | Class 0 | Class 1 | Class 2 | Class 3 |
+   |---|---------------|-------------------|---------|---------|---------|---------|
+   | 0 | Valorant      | valorant-bot.onnx | Head    | Body    | -       | -       |
+   | 1 | CS2           | cs2.onnx          | CT Body | CT Head | T Body  | T Head  |
+   | 2 | Global Strike | ssjj.onnx         | CT Body | CT Head | T Body  | T Head  |
+
+Other games and configurations have not been tested. For adaptation requests, please contact the author
+at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
+
+## Usage
 
 ### Dependencies Installation
 
@@ -65,7 +82,14 @@ To fix this, comment out the auto-fire code in `autoAim.cpp` and handle the shoo
       to [disable Memory Integrity](https://support.microsoft.com/en-us/windows/a-driver-can-t-load-on-this-device-8eea34e5-ff4b-16ec-870d-61a4a43b3dd5).
     - For more driver options, see [IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator).
 
-### Build and Run
+### Launching the Program
+- Launch command: `AImer.exe <game_id> <target_class> <in_game_sensitivity> <model_path>`
+- Game ID, target class, and model names are listed in the [Compatibility](#compatibility) table
+- Example: `AImer.exe 0 0 0.2 "../models/valorant-bot.onnx"` means playing Valorant,
+  aiming at `head`, with sensitivity of 0.2, and model path at `../models/valorant-bot.onnx`
+- The above parameters are for the original code. Feel free to modify as needed
+
+## Build and Run (Optional)
 
 ```powershell 
 # Run the following commands in PowerShell

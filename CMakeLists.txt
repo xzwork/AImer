@@ -28,8 +28,10 @@ add_executable(AImer
         src/main.cpp
         src/autoAim.cpp
         src/onnxDetector.cpp
+        src/GameSettings.cpp
         src/ScreenCapture.cpp
         src/MouseController.cpp
+        include/GameSettings.hpp
 )
 
 target_include_directories(AImer PRIVATE
