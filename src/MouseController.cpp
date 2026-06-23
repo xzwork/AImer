@@ -1,5 +1,11 @@
+﻿/*
+Required Notice: Copyright (c) 2026 何昊阳(He Haoyang) <hehaoyang1124@outlook.com>
+Full license: PolyForm Noncommercial License 1.0.0
+Complete license text located at repository root LICENSE file
+https://polyformproject.org/licenses/noncommercial/1.0.0
+*/
 #include "MouseController.hpp"
-#include "../deps/IbInputSimulator/InputSimulator.hpp"
+#include "InputSimulator.hpp"
 #include <Windows.h>
 #include <iostream>
 #include <map>

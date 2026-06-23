@@ -5,6 +5,7 @@
 - Educational Use Only: Do not use in online games to preserve fair play.
 - Risk Warning: Using this in online games may result in account bans. Users assume full responsibility for any
   consequences.
+- Commercial Use Prohibited: Please refer to the [LICENSE](LICENSE) for details.
 - Fair Play: We urge players to uphold a fair competitive environment.
 
 ## Introduction
@@ -14,55 +15,74 @@ currently applicable to the game ***Valorant, CS2, Global Strike***.
 
 ### Performance
 
-- GPU-accelerated inference competes with the game for computational resources.
-  The actual inference efficiency depends on your hardware performance.
+#### OpenVINO (CPU Inference)
 
-NOTE:  Maxing out inference FPS can backfire. If it's too fast for the recoil recovery,
-the script will over-correct and pull your crosshair down, causing you to whiff.
-To fix this, comment out the auto-fire code in `autoAim.cpp` and handle the shooting yourself.
+- The latest **_AImer_** update introduces IR models.
+  The new model is based on YOLO object detection with the
+  backbone replaced by MobileNetV4 which is more lightweight.
+
+- The new model is deployed using OpenVINO for CPU inference,
+  making it suitable for devices without NVIDIA GPUs.
+  It also avoids consuming GPU resources needed for game rendering.
+
+- This model trades a small amount of precision for higher inference FPS.
+
+#### ONNX Runtime (NVIDIA GPU CUDA-Accelerated Inference)
+
+- The YOLO-based model uses ONNX Runtime for inference,
+  with CUDA acceleration available on NVIDIA GPUs for higher inference FPS.
+
+- Compared to MobileNetV4, the original DarkNet backbone offers higher precision.
+  However, GPU-accelerated inference resulting in lower FPS when rendering the game.
+  Actual inference FPS depends on your hardware.
+
+> **Note:** Maxing out inference FPS can backfire. If it's too fast
+> for the recoil recovery, the script will over-correct and pull
+> your crosshair down, causing you to whiff. To fix this,
+> comment out the auto-fire code in `autoAim.cpp` and handle
+> the shooting yourself. (auto-fire is disabled by default).
 
 ### Program Logic
 
-- **Screen Capture**: Uses `DXGI` to capture a $640\times640$ region from the center of the screen.
+- **Screen Capture**: Uses `DXGI` to capture a 640×640 region from the center of the screen.
 
-- **Object Detection**: Trained based on `yolo11n`, exported as an ONNX model, and inferred using `onnxruntime`.
+- **Object Detection**: YOLO-based object detection models, exported as ONNX / IR models, and inferred using ONNX
+  Runtime or OpenVINO.
 
 - **Mouse Control**: Uses [IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator) to simulate mouse input.
-    - Linear fine-tuning for close targets
-    - Angular projection for large turns
+  Applies an adsorption mode for fine-tuning when targets are near the crosshair, and directly computes mouse input for
+  instant "one-frame flicks" at longer ranges.
 
 ### Compatibility
 
-1. The target platform for this project is `Windows 11` with `NVIDIA` GPUs for accelerated inference.
-   GPUs from other manufacturers are currently unsupported. Other Windows versions have not been tested.
+1. The target platform for this project is `Windows 11` with `NVIDIA` GPUs for accelerated inference. GPUs from other
+   manufacturers are currently unsupported. Other Windows versions have not been tested.
 
-2. This project simulates a Logitech mouse (see [Dependencies-Installation](#dependencies-installation)),
-   with a screen resolution of $2560\times 1440$, capturing the center $640\times640$ region of the screen.
-   **Notes:**
+2. This project simulates a Logitech mouse (see [Dependencies Installation](#dependencies-installation)),
+   with a screen resolution of 2560×1440, capturing the center 640×640 region of the screen.
     - Default sensitivity may vary depending on the simulated mouse driver
     - The FOV for screen capture may differ across resolutions
 
-3. Currently supported games and recommended settings are as follows
+3. Currently supported games and recommended settings
 
-   | # | Game          | Mouse Sensitivity           | V-Sync |
-   |---|---------------|-----------------------------|--------|
-   | 0 | Valorant      | 0.1                         | Off    |
-   | 1 | CS2           | 1.0                         | Off    |
-   | 2 | Global Strike | 10, disable mouse smoothing | On     |
+   | Launch Name | Game           | Mouse Sensitivity            | V-Sync |
+   |-------------|----------------|------------------------------|--------|
+   | valorant    | Valorant       | 0.1                          | Off    |
+   | cs2         | CS2            | 1.0                          | Off    |
+   | ssjj        | Global Strike  | 10, disable mouse smoothing  | On     |
+   > **Notes:**
+   > - Different sensitivities may not scale ideally under the same simulated input.
+       If performance doesn't meet expectations, try the settings above
+   > - Different game engines handle mouse input differently.
+       If the crosshair wobbles near the target, try enabling/disabling V-Sync
 
-   **Notes:**
-    - Different sensitivities may not scale ideally under the same simulated input.
-      If performance doesn't meet expectations, try the settings above
-    - Different game engines handle mouse input differently.
-      If the crosshair wobbles near the target, try enabling/disabling V-Sync
+4. Currently supported detection classes
 
-4. Currently supported models
-
-   | # | Game          | Model             | Class 0 | Class 1 | Class 2 | Class 3 |
-   |---|---------------|-------------------|---------|---------|---------|---------|
-   | 0 | Valorant      | valorant-bot.onnx | Head    | Body    | -       | -       |
-   | 1 | CS2           | cs2.onnx          | CT Body | CT Head | T Body  | T Head  |
-   | 2 | Global Strike | ssjj.onnx         | CT Body | CT Head | T Body  | T Head  |
+   | Launch Name | Game           | Class 0       | Class 1          | Class 2    | Class 3        |
+   |-------------|----------------|---------------|------------------|------------|----------------|
+   | valorant    | Valorant       | head          | enemy            | -          | -              |
+   | cs2         | CS2            | ct            | ct_head          | t          | t_head         |
+   | ssjj        | Global Strike  | ct            | ct_head          | t          | t_head         |
 
 Other games and configurations have not been tested. For adaptation requests, please contact the author
 at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
@@ -83,13 +103,38 @@ at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
     - For more driver options, see [IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator).
 
 ### Launching the Program
-- Launch command: `AImer.exe <game_id> <target_class> <in_game_sensitivity> <model_path>`
-- Game ID, target class, and model names are listed in the [Compatibility](#compatibility) table
-- Example: `AImer.exe 0 0 0.2 "../models/valorant-bot.onnx"` means playing Valorant,
-  aiming at `head`, with sensitivity of 0.2, and model path at `../models/valorant-bot.onnx`
-- The above parameters are for the original code. Feel free to modify as needed
+
+The launch command help is as follows:
+
+```bash
+Usage: AImer.exe [OPTIONS]
+Options:
+  -h,--help                            Print this help message and exit
+  -n,--name TEXT REQUIRED              Game name (valorant|cs2|ssjj)
+  -t,--target TEXT REQUIRED            Target name (e.g. head, enemy, ct, t)
+  -s,--sensitivity FLOAT REQUIRED      Mouse sensitivity
+  -m,--model TEXT:FILE REQUIRED        Model path (.xml/.onnx)
+  -w,--weights TEXT:FILE               Weights path (.bin), use OpenVINO when provided
+```
+
+- Launch command:
+  `AImer.exe -n <game_name> -t <target_name> -s <in_game_sensitivity> -m <model_path> -w <weights_path (optional)>`
+- Game names and target names are listed in the [Compatibility](#compatibility) table.
+- The weights path is optional:
+    - With `-w` specified: uses OpenVINO (CPU) inference
+    - Without `-w`: uses ONNX Runtime (NVIDIA GPU CUDA acceleration) inference
+- Example: `AImer.exe -n valorant -t head -s 0.1 -m ../models/valorant-bot.onnx`
+    - Game: Valorant
+    - Target: head
+    - Sensitivity: 0.1
+    - Model: `../models/valorant-bot.onnx`
+    - No weights file, using NVIDIA GPU inference
 
 ## Build and Run (Optional)
+
+If you want to modify the source code or compile it yourself:
+
+Prerequisites: [CMake](https://cmake.org/download/), [Visual Studio](https://visualstudio.microsoft.com/vs/), [OpenCV](https://opencv.org/releases/), [CUDNN](https://developer.nvidia.com/cudnn)
 
 ```powershell 
 # Run the following commands in PowerShell
@@ -99,11 +144,15 @@ cd build
 # Configure
 cmake `
 -DOpenCV_DIR=path/to/OpenCV `
--DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 ..
+-DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 `
+-DOpenVINO_DIR=path/to/OpenVINO ..
 
 # Build
 cmake --build . --config Release
 
 # Run
-.\Release\AImer.exe <path/to/model.onnx> <sensitivity>
+..\bin\Release\AImer.exe `
+-n valorant -t head -s 0.1 `
+-m ..\models\valorant\valorant-bot.xml `
+-w ..\models\valorant\valorant-bot.bin
 ```

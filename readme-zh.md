@@ -6,6 +6,8 @@
 
 - 本项目的程序在线上游戏存在封号风险，因违规竞技造成的后果需要自行承担。
 
+- 本项目禁止商用，详见[LICENSE](LICENSE)
+
 - 希望各位玩家热爱游戏、尊重对手、珍视账号，共同维护游戏的公平竞技环境。
 
 ## 简介
@@ -14,16 +16,26 @@
 
 ### 关于性能
 
-- 使用显卡加速推理，会与游戏竞争计算资源，实际推理帧数与设备性能有关
+#### OpenVINO （CPU推理）
+- 最新的 **_AImer_** 更新了ir模型。新模型基于yolo目标检测开发，替换主干网络为更加轻量化的MobileNetV4
 
-- 推理帧数过高不总是好事，当推理比弹道回正速度快时，程序会自动压镜头，导致连续空枪。
-  您可以在`autoAim.cpp`中注释掉自动开火，自己把握射击的主动权
+- 新模型使用 OpenVINO 部署，纯CPU推理，可适用于无NVIDIA显卡的设备，
+  也可以避免占用显卡渲染游戏的计算资源，用少量精度的下降换取更高的推理帧率
+
+#### ONNX Runtime （NVIDIA显卡CUDA加速推理）
+
+- 基于yolo目标检测的模型，使用ONNX Runtime进行推理， 可以在NVIDIA显卡上使用CUDA加速推理，提高推理帧率
+ 
+- 相比MobileNetV4，原DarkNet的主干网络精度更高，但在显卡加速推理会与游戏渲染竞争计算资源，导致帧率较低，实际推理帧数与设备性能有关
+
+注意：推理帧数过高不总是好事，当推理比弹道回正速度快时，程序会自动压镜头，导致连续空枪。
+您可以在`autoAim.cpp`中注释自动开火，自己把握射击的主动权（已经默认关闭自动开火）
 
 ### 程序逻辑
 
-- 屏幕截取：使用`DXGI`来抓取屏幕中间 $640\times640$ 的区域
+- 屏幕截取：使用`DXGI`来抓取屏幕中间 640×640 的区域
 
-- 目标检测：基于`yolo11n`训练，导出为onnx模型，并使用`onnxruntime`进行推理
+- 目标检测：基于`yolo`目标检测训练的模型，导出为 onnx / ir 模型，并使用 ONNX Runtime/OpenVINO 进行推理
 
 - 鼠标控制：使用[IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator)模拟鼠标进行控制。
   在目标靠近准星时使用吸附模式进行微调，在远距离时直接计算鼠标输入实现“一帧拉”
@@ -38,23 +50,23 @@
     - 不同分辨率下截屏的视场角可能有所差异
 
 3. 目前适配的游戏及推荐设置如下
-
-   | 序号 | 游戏   | 鼠标灵敏度     | 垂直同步 |
-   |----|------|-----------|------|
-   | 0  | 无畏契约 | 0.1       | 关    |
-   | 1  | CS2  | 1.0       | 关    |
-   | 2  | 生死狙击 | 10，关闭鼠标平滑 | 开    |
+ 
+   | 启动名称     | 游戏   | 鼠标灵敏度     | 垂直同步 |
+   |----------|------|-----------|------|
+   | valorant | 无畏契约 | 0.1       | 关    |
+   | cs2      | CS2  | 1.0       | 关    |
+   | ssjj     | 生死狙击 | 10，关闭鼠标平滑 | 开    |
 
     - 不同灵敏度在相同的模拟输入下未必是理想的倍数关系，如果效果不符合预期，可尝试以上的设置
     - 不同游戏引擎对于鼠标输入的处理策略不同，如若准星在目标附近晃动，可尝试开启/关闭垂直同步
 
-4. 目前支持的模型
+4. 目前支持的目标检测类别
  
-   | 序号 | 游戏   | 模型                | 类别 0  | 类别 1  | 类别 2 | 类别 3 |
-   |----|------|-------------------|-------|-------|------|------|
-   | 0  | 无畏契约 | valorant-bot.onnx | 头部    | 全身    | -    | -    |
-   | 1  | CS2  | cs2.onnx          | CT 全身 | CT 头部 | T 全身 | T 头部 |
-   | 2  | 生死狙击 | ssjj.onnx         | CT 全身 | CT 头部 | T 全身 | T 头部 |
+   | 启动名称     | 游戏   | 类别 0      | 类别 1           | 类别 2    | 类别 3         |
+   |----------|------|-----------|----------------|---------|--------------|
+   | valorant | 无畏契约 | 头部(head)  | 全身(enemy)      | -       | -            |
+   | cs2      | CS2  | CT 全身(ct) | CT 头部(ct_head) | T 全身(t) | T 头部(t_head) |
+   | ssjj     | 生死狙击 | CT 全身(ct) | CT 头部(ct_head) | T 全身(t) | T 头部(t_head) |
 
 其他游戏以及不同配置尚未进行测试，如有需要，可联系作者[hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com)进行适配。
 
@@ -63,19 +75,38 @@
 ### 安装依赖
 
 - 您需要安装[NVIDIA显卡驱动程序](https://www.nvidia.cn/geforce/drivers/)，
-以便使用[CUDA Toolkit](https://developer.nvidia.com/cuda/toolkit)，[CUDNN](https://developer.nvidia.com/cudnn)进行推理加速
+  以便使用[CUDA Toolkit](https://developer.nvidia.com/cuda/toolkit)，[CUDNN](https://developer.nvidia.com/cudnn)进行推理加速
 - 您需要鼠标驱动进行模拟鼠标，否则将退为Send Input，可能被大部分反作弊的游戏过滤掉
   - 简单地说，您可以直接安装[Logitech Gaming Software v9.02.65](https://github.com/Chaoses-Ib/IbLogiSoftExt/releases/download/v0.1/LGS.v9.02.65_x64.exe)
   - 如无法加载驱动程序，需[关闭内存完整性保护](https://support.microsoft.com/en-us/windows/a-driver-can-t-load-on-this-device-8eea34e5-ff4b-16ec-870d-61a4a43b3dd5)
   - 更多驱动，详见[IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator)。
 
 ### 启动程序
-- 启动命令为 `AImer.exe <游戏序号> <目标类别> <游戏内灵敏度> <模型地址>`
-- 游戏序号，目标检测，模型名称见[适配情况](#适配情况)表格
-- 例如：`AImer.exe 0 0 0.2 "../models/valorant-bot.onnx"`，
-  表示游玩无畏契约，目标类别为头部，游戏内灵敏度为0.2，模型地址为`../models/valorant-bot.onnx`
-- ~~以上参数适配原代码，大佬们尽可按需魔改~~
 
+启动命令帮助如下
+``` bash
+Usage: AImer.exe [OPTIONS]
+Options:
+  -h,--help                            Print this help message and exit
+  -n,--name TEXT REQUIRED              Game name (valorant|cs2|ssjj)
+  -t,--target TEXT REQUIRED            Target name (e.g. head, enemy, ct, t)
+  -s,--sensitivity FLOAT REQUIRED      Mouse sensitivity
+  -m,--model TEXT:FILE REQUIRED        Model path (.xml/.onnx)
+  -w,--weights TEXT:FILE               Weights path (.bin), use OpenVINO when provided
+```
+
+- 启动命令为 `AImer.exe -n <游戏名称> -t <目标类别> -s <游戏内灵敏度> -m <模型文件> -w <权重文件（可选）>`
+- 游戏名称，目标类别见[适配情况](#适配情况)表格
+- 权重文件为可选参数
+  - 使用权重文件表示使用OpenVINO（使用CPU）推理
+  - 不使用权重文件使用onnxRuntime（默认使用NVIDIA显卡CUDA加速）推理
+- 例如：`AImer.exe -n valorant -t head -s 0.1 -m ../models/valorant-bot.onnx`
+  - 表示启动【无畏契约】
+  - 目标类别为【头部】，
+  - 游戏内灵敏度为0.1，
+  - 模型文件为`../models/valorant-bot.onnx`，
+  - 无权重文件，使用NVIDIA显卡进行推理
+- ~~以上参数适配原代码，大佬们尽可按需魔改~~
 
 ## 构建运行（可选）
 
@@ -85,6 +116,8 @@
 [Visual Studio](https://visualstudio.microsoft.com/zh-hans/downloads/)，
 [OpenCV](https://opencv.org/releases/)，
 [CUDNN](https://developer.nvidia.com/cudnn)
+[ONNX Runtime](https://onnxruntime.ai/)
+[OpenVINO](https://openvinotoolkit.org/)
 
 ``` powershell 
 # 在powershell中运行如下命令
@@ -94,11 +127,15 @@ cd build
 # 配置
 cmake `
 -DOpenCV_DIR=path/to/OpenCV `
--DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 ..
+-DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 `
+-DOpenVINO_DIR=path/to/OpenVINO ..
 
 # 编译
 cmake --build . --config Release
 
 # 运行
-.\Release\AImer.exe <path/to/model.onnx> <sensitivity>
+..\bin\Release\AImer.exe `
+-n valorant -t head -s 0.1 `
+-m ..\models\valorant\valorant-bot.xml `
+-w ..\models\valorant\valorant-bot.bin
 ```

@@ -1,3 +1,9 @@
+﻿/*
+Required Notice: Copyright (c) 2026 何昊阳(He Haoyang) <hehaoyang1124@outlook.com>
+Full license: PolyForm Noncommercial License 1.0.0
+Complete license text located at repository root LICENSE file
+https://polyformproject.org/licenses/noncommercial/1.0.0
+*/
 #pragma once
 #include <d3d11.h>
 #include <dxgi1_2.h>
