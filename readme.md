@@ -1,5 +1,17 @@
 # AImer - AI-Assisted Aiming Learning Project Based on Computer Vision Object Detection
 
+<div align="center">
+  <a href="LICENSE"><img alt="License" src="./assets/license.svg"></a>
+ <br>
+  <img alt="C++" src="./assets/c++.svg">
+  <img alt="CMake" src="./assets/cmake.svg">
+  <img alt="Platform" src="./assets/platform.svg">
+</div>
+
+<div align="center">
+  <a href="readme-zh.md">简体中文</a>
+</div>
+
 ## Disclaimer
 
 - Educational Use Only: Do not use in online games to preserve fair play.
@@ -84,8 +96,13 @@ currently applicable to the game ***Valorant, CS2, Global Strike***.
    | cs2         | CS2            | ct            | ct_head          | t          | t_head         |
    | ssjj        | Global Strike  | ct            | ct_head          | t          | t_head         |
 
-Other games and configurations have not been tested. For adaptation requests, please contact the author
-at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
+5. Custom Games
+   - All game configurations are loaded from [games.yaml](games.yaml).
+     You can edit this file to add support for other games. 
+   - You can use your own models (currently only supports YOLO-detect). 
+     Make sure the target order matches your model's class categories. 
+   - Other games and configurations have not been tested. For adaptation requests, please contact the author
+     at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
 
 ## Usage
 
@@ -104,6 +121,18 @@ at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com).
 
 ### Launching the Program
 
+#### 1. Launch from the Launcher UI
+
+1. Simply double-click AImer.exe or run it without any arguments to open the Launcher window as shown below.
+2. Select the game, target, and mouse sensitivity (in-game sensitivity) from the dropdown menus.
+3. Choose the model file and weight file (optional) for the target.
+4. Click the **_Launch AImer_** button to start.
+
+|                                    |                                              |                                                  |
+|------------------------------------|----------------------------------------------|--------------------------------------------------|
+| ![EUI-NEO.png](assets/EUI-NEO.png) | ![GameDropdown.png](assets/GameDropdown.png) | ![TargetDropdown.png](assets/TargetDropdown.png) |
+
+#### 2. Launch from the Command Line
 The launch command help is as follows:
 
 ```bash
@@ -137,7 +166,11 @@ If you want to modify the source code or compile it yourself:
 Prerequisites: [CMake](https://cmake.org/download/), [Visual Studio](https://visualstudio.microsoft.com/vs/), [OpenCV](https://opencv.org/releases/), [CUDNN](https://developer.nvidia.com/cudnn)
 
 ```powershell 
-# Run the following commands in PowerShell
+# Clone the repository and submodules
+git clone https://github.com/HeHaoyang1124/AImer.git
+cd AImer
+git submodule update --init --recursive
+
 mkdir build
 cd build
 
@@ -155,4 +188,5 @@ cmake --build . --config Release
 -n valorant -t head -s 0.1 `
 -m ..\models\valorant\valorant-bot.xml `
 -w ..\models\valorant\valorant-bot.bin
+# Or simply run ../AImer.exe to launch the Launcher UI.
 ```

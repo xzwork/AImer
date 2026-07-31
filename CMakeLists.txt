@@ -7,9 +7,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 
 # CLI11
-include(FetchContent)
-FetchContent_Declare(CLI11 GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git GIT_TAG v2.4.2)
-FetchContent_MakeAvailable(CLI11)
+add_subdirectory(deps/CLI11 EXCLUDE_FROM_ALL)
+
+# yaml-cpp
+add_subdirectory(deps/yaml-cpp EXCLUDE_FROM_ALL)
 
 # OpenCV
 find_package(OpenCV REQUIRED)
@@ -37,16 +38,25 @@ set(IB_DIR ${PROJECT_SOURCE_DIR}/deps/IbInputSimulator)
 # CUDNN
 set(CUDNN_LIB_DIR CACHE PATH "Path to cuDNN library directory")
 
+# EUI-NEO - Disable examples and building extra tests
+set(EUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(EUI_BUILD_PLAYGROUND OFF CACHE BOOL "" FORCE)
+add_subdirectory(deps/EUI-NEO EXCLUDE_FROM_ALL)
+
 # AImer
 add_executable(AImer
         src/main.cpp
+        src/Games.cpp
         src/autoAim.cpp
+        src/ScreenCapture.cpp
+        src/MouseController.cpp
+
+        src/launcher/Launcher.cpp
+        src/launcher/interface.cpp
+
         src/detector/Detector.cpp
         src/detector/OnnxDetector.cpp
         src/detector/OpenvinoDetector.cpp
-        src/GameSettings.cpp
-        src/ScreenCapture.cpp
-        src/MouseController.cpp
 )
 
 target_include_directories(AImer PRIVATE
@@ -63,15 +73,17 @@ target_link_directories(AImer PRIVATE
 )
 
 target_link_libraries(AImer PRIVATE
-        ${OpenCV_LIBS}
-        openvino::runtime
         CLI11::CLI11
-        onnxruntime.lib
-        onnxruntime_providers_shared.lib
-        onnxruntime_providers_cuda.lib
-        cudnn64_9.lib
+        eui_neo
+        yaml-cpp
         d3d11
         dxgi
+        ${OpenCV_LIBS}
+        cudnn64_9.lib
+        openvino::runtime
+        onnxruntime.lib
+        onnxruntime_providers_cuda.lib
+        onnxruntime_providers_shared.lib
 )
 
 # copy onnxruntime dlls
@@ -98,6 +110,14 @@ add_custom_command(TARGET AImer POST_BUILD
         "${OpenVINO_DIR}/bin/$<IF:$<CONFIG:Debug>,Debug,Release>"
         "$<TARGET_FILE_DIR:AImer>"
         COMMENT "Copying OpenVINO runtime dlls ($<CONFIG>)"
+)
+
+# copy games.yaml
+add_custom_command(TARGET AImer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${PROJECT_SOURCE_DIR}/games.yaml"
+        "$<TARGET_FILE_DIR:AImer>"
+        COMMENT "Copying games.yaml to output directory"
 )
 
 # copy TBB dlls

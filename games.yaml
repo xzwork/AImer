@@ -1,0 +1,30 @@
+valorant:
+  mouse_speed: 1.8
+  default_sensitivity: 0.1
+  field_angle: 34.0
+  pixels_per_circle: 52488.0
+  targets:
+    - head
+    - enemy
+
+cs2:
+  mouse_speed: 1.8
+  default_sensitivity: 1.0
+  field_angle: 37.0
+  pixels_per_circle: 16296.0
+  targets:
+    - ct
+    - ct_head
+    - t
+    - t_head
+
+ssjj:
+  mouse_speed: 0.5
+  default_sensitivity: 10.0
+  field_angle: 28.2
+  pixels_per_circle: 18000.0
+  targets:
+    - ct
+    - ct_head
+    - t
+    - t_head

@@ -6,7 +6,7 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include "AutoAim.h"
 #include "MouseController.hpp"
-#include "GameSettings.hpp"
+#include "Games.hpp"
 #include <cmath>
 
 static void controlMouse(const float x, const float y,
@@ -21,7 +21,7 @@ static void controlMouse(const float x, const float y,
 
     const MouseController &mouse = MouseController::getInstance();
 
-    constexpr auto delta = std::chrono::milliseconds(100);
+    constexpr auto delta = std::chrono::milliseconds(30);
     constexpr auto short_delta = std::chrono::milliseconds(10);
     const auto now = std::chrono::steady_clock::now();
     static auto lastInstance = std::chrono::steady_clock::now();
@@ -31,9 +31,6 @@ static void controlMouse(const float x, const float y,
         mouse.MoveRelative(static_cast<int>(std::atan(x / dep) * pixels_per_radian * modification),
                            static_cast<int>(std::atan(y / dep) * pixels_per_radian * modification));
         lastInstance = now;
-    } else if (now - lastInstance >= short_delta) {
-        mouse.MoveRelative(std::copysign(1, static_cast<int>(x)),
-                           std::copysign(1, static_cast<int>(y)));
     }
 }
 

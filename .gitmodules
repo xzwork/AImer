@@ -1,0 +1,11 @@
+[submodule "deps/CLI11"]
+	path = deps/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
+
+[submodule "deps/EUI-NEO"]
+	path = deps/EUI-NEO
+	url = https://github.com/sudoevolve/EUI-NEO.git
+
+[submodule "deps/yaml-cpp"]
+	path = deps/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git

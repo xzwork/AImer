@@ -1,5 +1,17 @@
 # AImer - 基于计算机视觉目标检测的辅助瞄准学习项目
 
+<div align="center">
+  <a href="LICENSE"><img alt="License" src="./assets/license.svg"></a>
+ <br>
+  <img alt="C++" src="./assets/c++.svg">
+  <img alt="CMake" src="./assets/cmake.svg">
+  <img alt="Platform" src="./assets/platform.svg">
+</div>
+
+<div align="center">
+  <a href="readme.md">English</a>
+</div>
+
 ## 声明
 
 - 本项目一切源码仅供学习使用，可自由修改并应用于离线游戏，但不应用于在线游戏而破坏游戏公平性。
@@ -67,8 +79,11 @@
    | valorant | 无畏契约 | 头部(head)  | 全身(enemy)      | -       | -            |
    | cs2      | CS2  | CT 全身(ct) | CT 头部(ct_head) | T 全身(t) | T 头部(t_head) |
    | ssjj     | 生死狙击 | CT 全身(ct) | CT 头部(ct_head) | T 全身(t) | T 头部(t_head) |
-
-其他游戏以及不同配置尚未进行测试，如有需要，可联系作者[hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com)进行适配。
+ 
+5. 自定义游戏支持的模型
+    - 所有的游戏支持都从[games.yaml](games.yaml)中读取，您可以自行修改该文件以添加适用于其他游戏的设置
+    - 您可以使用自己的模型（目前仅支持后处理YOLO-detect系列的输出网络），target的次序应和模型目标分类一致
+    - 其他游戏以及不同配置尚未进行测试，如有需要，可联系作者[hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com)进行适配。
 
 ## 开始游戏
 
@@ -83,6 +98,17 @@
 
 ### 启动程序
 
+#### 1. 从Launcher界面启动
+- 直接点击AImer.exe或无其他参数执行AImer.exe即可打开如图Launcher窗口
+- 从下拉列表中选择游戏、识别目标、鼠标灵敏度（游戏内灵敏度）
+- 选择适用于识别目标的模型文件、权重文件（可选，根据权重有无分别使用ONNX Runtime/OpenVINO推理）
+- 点击【Launch AImer】按钮启动程序
+
+|                                    |                                              |                                                  |
+|------------------------------------|----------------------------------------------|--------------------------------------------------|
+| ![EUI-NEO.png](assets/EUI-NEO.png) | ![GameDropdown.png](assets/GameDropdown.png) | ![TargetDropdown.png](assets/TargetDropdown.png) |
+
+#### 2. 从命令行启动
 启动命令帮助如下
 ``` bash
 Usage: AImer.exe [OPTIONS]
@@ -120,7 +146,11 @@ Options:
 [OpenVINO](https://openvinotoolkit.org/)
 
 ``` powershell 
-# 在powershell中运行如下命令
+# 克隆仓库和子模块
+git clone https://github.com/HeHaoyang1124/AImer.git
+cd AImer
+git submodule update --init --recursive
+
 mkdir build
 cd build
 
@@ -138,4 +168,5 @@ cmake --build . --config Release
 -n valorant -t head -s 0.1 `
 -m ..\models\valorant\valorant-bot.xml `
 -w ..\models\valorant\valorant-bot.bin
+# 或者直接运行 ../AImer.exe 启动Launcher界面
 ```
