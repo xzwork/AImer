@@ -19,13 +19,54 @@
   consequences.
 - Commercial Use Prohibited: Please refer to the [LICENSE](LICENSE) for details.
 - Fair Play: We urge players to uphold a fair competitive environment.
+- ~~The author is swamped with studies, so updates come entirely by chance.~~
 
 ## Introduction
 
 **_AImer_** is an aim-assist project based on computer vision object detection,
-currently applicable to the game ***Valorant, CS2, Global Strike***.
+currently applicable to the games ***Aimlabs (Gridshot only), Valorant, CS2, and Global Strike*** for aim assistance.
 
-### Performance
+## AImer - aimlab
+
+### Program Logic
+
+- **Screen Capture**: Captures the entire screen via `DXGI`.
+- **Object Detection**: Leverages OpenCV's traditional computer vision to identify light blue spheres by hue and size—**no deep learning involved**.
+- **Mouse Control**: Simulates mouse input through [IbInputSimulator](https://github.com/Chaoses-Ib/IbInputSimulator). 
+  It uses FOV and in-game sensitivity to snap the crosshair instantly onto targets, and also supports auto-fire.
+
+### Recommended Settings
+
+| Setting          | Value     |
+|------------------|-----------|
+| Preset (FOV)     | Valorant  |
+| Resolution       | 2560×1440 |
+| Graphics Quality | Fastest   |
+| Latency Mode     | Ultra Low |
+| Sensitivity      | 0.1       |
+| Input            | RawInput  |
+
+> **Note:** 
+> - Performance settings affect input lag.
+> - Different FOV values change how mouse input is calculated.
+> - Different sensitivities don't always scale the same way under the same input.
+> - **If things don't feel right, try the settings above.**
+ 
+Other modes and configurations haven't been tested.
+Get in touch at [hehaoyang1124@outlook.com](mailto:hehaoyang1124@outlook.com) if you need help adapting.
+
+### Scores (Records Broken)
+
+| ![Gridshot](assets/gridshot.png)      | ![Line Trace](assets/linetrace.png)   | ![Micro Shot](assets/microshot.png)   |
+|---------------------------------------|---------------------------------------|---------------------------------------|
+| ![Motion Shot](assets/motionshot.png) | ![Multi Shot](assets/multishot.png)   | ![Reflex Shot](assets/reflexshot.png) |
+| ![Six Shot](assets/sixshot.png)       | ![Sniper Shot](assets/snipershot.png) | ![Spider Shot](assets/spidershot.png) |
+
+---
+
+## AImer - DL
+
+### About Performance
 
 #### OpenVINO (CPU Inference)
 
@@ -159,34 +200,38 @@ Options:
     - Model: `../models/valorant-bot.onnx`
     - No weights file, using NVIDIA GPU inference
 
-## Build and Run (Optional)
+## Build and Run
 
 If you want to modify the source code or compile it yourself:
 
-Prerequisites: [CMake](https://cmake.org/download/), [Visual Studio](https://visualstudio.microsoft.com/vs/), [OpenCV](https://opencv.org/releases/), [CUDNN](https://developer.nvidia.com/cudnn)
+Prerequisites: [CMake](https://cmake.org/download/), [Visual Studio](https://visualstudio.microsoft.com/vs/), [OpenCV](https://opencv.org/releases/), [CUDNN](https://developer.nvidia.com/cudnn), [ONNX Runtime](https://onnxruntime.ai/), [OpenVINO](https://openvinotoolkit.org/)
 
-```powershell 
-# Clone the repository and submodules
-git clone https://github.com/HeHaoyang1124/AImer.git
-cd AImer
-git submodule update --init --recursive
-
-mkdir build
-cd build
-
-# Configure
-cmake `
--DOpenCV_DIR=path/to/OpenCV `
--DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 `
--DOpenVINO_DIR=path/to/OpenVINO ..
-
-# Build
-cmake --build . --config Release
-
-# Run
-..\bin\Release\AImer.exe `
--n valorant -t head -s 0.1 `
--m ..\models\valorant\valorant-bot.xml `
--w ..\models\valorant\valorant-bot.bin
-# Or simply run ../AImer.exe to launch the Launcher UI.
-```
+1. Clone the repository and submodules
+    ``` powershell
+    git clone https://github.com/HeHaoyang1124/AImer
+    git submodule update --init --recursive
+    ```
+2. Configure and build
+    ``` powershell
+    mkdir build
+    cd build
+    
+    cmake `
+    -DOpenCV_DIR=path/to/OpenCV `
+    -DCUDNN_LIB_DIR=Path/to/CUDNN/xxx/lib/xxx/x64 `
+    -DOpenVINO_DIR=path/to/OpenVINO ..
+    
+    cmake --build . --config Release
+    ```
+3. Configure and build
+    ```
+    # Run AImer-DL
+    ..\bin\Release\AImer.exe `
+    -n valorant -t head -s 0.1 `
+    -m ..\models\valorant\valorant-bot.xml `
+    -w ..\models\valorant\valorant-bot.bin
+    # Or simply run AImer.exe to launch the Launcher UI.
+    
+    # Run AImer-aimlab
+    ..\bin\Release\AImer-aimlab.exe -s 0.1
+    ```

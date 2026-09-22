@@ -9,12 +9,12 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 
 #include <CLI/CLI.hpp>
 
-#include "Games.hpp"
-#include "launcher/Launcher.hpp"
-#include "detector/OnnxDetector.hpp"
-#include "detector/OpenvinoDetector.hpp"
-#include "ScreenCapture.hpp"
-#include "AutoAim.h"
+#include "../Games.hpp"
+#include "Launcher.hpp"
+#include "../detector/OnnxDetector.hpp"
+#include "../detector/OpenvinoDetector.hpp"
+#include "capture/ScreenCapture.hpp"
+#include "../autoAim.h"
 
 static constexpr int CAPTURE_SIZE = 640;
 

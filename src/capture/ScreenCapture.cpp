@@ -62,7 +62,7 @@ bool ScreenCapture::CaptureFrame(cv::Mat &frame) {
               m_duplication);
 
     // Convert BGRA to BGR
-    const cv::Mat bgra_frame(m_regionWidth, m_regionHeight,
+    const cv::Mat bgra_frame(m_regionHeight, m_regionWidth,
                              CV_8UC4, mapped.pData, mapped.RowPitch);
     cv::cvtColor(bgra_frame, frame, cv::COLOR_BGRA2BGR);
 

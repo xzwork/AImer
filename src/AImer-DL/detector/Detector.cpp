@@ -4,7 +4,7 @@ Full license: PolyForm Noncommercial License 1.0.0
 Complete license text located at repository root LICENSE file
 https://polyformproject.org/licenses/noncommercial/1.0.0
 */
-#include "detector/Detector.hpp"
+#include "Detector.hpp"
 
 Detector::Detector(const float conf_threshold,
                    const float nms_threshold)

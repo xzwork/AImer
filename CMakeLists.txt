@@ -45,18 +45,18 @@ add_subdirectory(deps/EUI-NEO EXCLUDE_FROM_ALL)
 
 # AImer
 add_executable(AImer
-        src/main.cpp
-        src/Games.cpp
-        src/autoAim.cpp
-        src/ScreenCapture.cpp
-        src/MouseController.cpp
+        src/capture/ScreenCapture.cpp
+        src/controller/MouseController.cpp
 
-        src/launcher/Launcher.cpp
-        src/launcher/interface.cpp
+        src/AImer-DL/launcher/Launcher.cpp
+        src/AImer-DL/launcher/interface.cpp
 
-        src/detector/Detector.cpp
-        src/detector/OnnxDetector.cpp
-        src/detector/OpenvinoDetector.cpp
+        src/AImer-DL/main.cpp
+        src/AImer-DL/Games.cpp
+        src/AImer-DL/autoAim.cpp
+        src/AImer-DL/detector/Detector.cpp
+        src/AImer-DL/detector/OnnxDetector.cpp
+        src/AImer-DL/detector/OpenvinoDetector.cpp
 )
 
 target_include_directories(AImer PRIVATE
@@ -64,7 +64,7 @@ target_include_directories(AImer PRIVATE
         ${OpenVINO_INCLUDE_DIRS}
         ${IB_DIR}
         ${ORT_DIR}/include
-        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
 )
 
 target_link_directories(AImer PRIVATE
@@ -129,3 +129,33 @@ foreach (DLL_FILE ${OpenVINO_TBB_DLL_FILES})
             COMMENT "Copying TBB dlls to output directory"
     )
 endforeach ()
+
+# AImer-aimlab (traditional CV-based aimlab assistant)
+add_executable(AImer-aimlab
+        src/AImer-aimlab/main.cpp
+        src/AImer-aimlab/autoAim.cpp
+        src/capture/ScreenCapture.cpp
+        src/controller/MouseController.cpp
+)
+
+target_include_directories(AImer-aimlab PRIVATE
+        ${OpenCV_INCLUDE_DIRS}
+        ${IB_DIR}
+        ${PROJECT_SOURCE_DIR}/src
+        ${PROJECT_SOURCE_DIR}/src/aimlab
+)
+
+target_link_libraries(AImer-aimlab PRIVATE
+        CLI11::CLI11
+        ${OpenCV_LIBS}
+        d3d11
+        dxgi
+)
+
+# copy IbInputSimulator dll
+add_custom_command(TARGET AImer-aimlab POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${IB_DIR}/IbInputSimulator.dll
+        $<TARGET_FILE_DIR:AImer-aimlab>
+        COMMENT "Copying IbInputSimulator dll to output directory"
+)

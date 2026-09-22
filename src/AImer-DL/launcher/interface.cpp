@@ -5,7 +5,7 @@ Complete license text located at repository root LICENSE file
 https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include <eui_neo.h>
-#include "launcher/Launcher.hpp"
+#include "Launcher.hpp"
 
 namespace {
     constexpr float kMarginX = 24.0f;

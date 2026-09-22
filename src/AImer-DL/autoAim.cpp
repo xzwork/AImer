@@ -5,7 +5,7 @@ Complete license text located at repository root LICENSE file
 https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include "AutoAim.h"
-#include "MouseController.hpp"
+#include "controller/MouseController.hpp"
 #include "Games.hpp"
 #include <cmath>
 
@@ -21,8 +21,7 @@ static void controlMouse(const float x, const float y,
 
     const MouseController &mouse = MouseController::getInstance();
 
-    constexpr auto delta = std::chrono::milliseconds(30);
-    constexpr auto short_delta = std::chrono::milliseconds(10);
+    constexpr auto delta = std::chrono::milliseconds(50);
     const auto now = std::chrono::steady_clock::now();
     static auto lastInstance = std::chrono::steady_clock::now();
 
