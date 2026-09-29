@@ -22,6 +22,10 @@ struct GameSettings {
     float field_radian = 0.0f;
     float pixels_per_radian = 0.0f;
     std::vector<std::string> targets;
+    float fov = 0.0f;
+    float sensitivity = 1.0f;
+    float aim_fov = 0.0f;
+    float target_lock_iou = 0.2f;
 };
 
 class Games {

@@ -6,6 +6,7 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include <eui_neo.h>
 #include "Launcher.hpp"
+#include "../Games.hpp"
 
 namespace {
     constexpr float kMarginX = 24.0f;
@@ -229,6 +230,7 @@ namespace app {
             const float popupY = fieldRowY + kFieldHeight + kPopupGap;
             auto onSelect = [&](const int i) {
                 launcher.selectedGame = i;
+                launcher.sensitivityStr = std::to_string(Games::instance().getSettings(launcher.getGames()[i]).sensitivity);
                 launcher.selectedTarget = 0;
                 launcher.gameDropdownOpen.set(false);
                 launcher.updateStatus("Game: " + launcher.getGames()[i], false);

@@ -9,4 +9,5 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 #include "detector/Detector.hpp"
 
 void autoAim(const Detector::Detection &detection, int cx, int cy,
-             const GameSettings &settings, const std::string &target, float sensitivity);
+             const GameSettings &settings, const std::string &target, float sensitivity,
+             int screenWidth, int screenHeight);

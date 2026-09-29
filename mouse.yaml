@@ -1,0 +1,4 @@
+# virtual_hid: local/offline KMDF/VHF mouse (requires installed driver and elevation)
+# send_input: native Windows SendInput (default); ib_input: Ib SendInput
+# Legacy AIMER_INPUT_BACKEND=Win32/SendInput/Auto is still supported and takes precedence.
+mouse_backend: send_input

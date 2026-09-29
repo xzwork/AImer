@@ -43,6 +43,7 @@ x86/
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+!drivers/VirtualHidMouse/AImerVirtualMouse.vcxproj
 *.sln
 *.suo
 *.opensdf

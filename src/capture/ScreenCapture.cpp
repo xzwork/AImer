@@ -28,7 +28,9 @@ static void procError(const std::string &msg,
 ScreenCapture &ScreenCapture::getInstance(const int width, const int height) {
     static ScreenCapture capture(width, height);
     if (capture.m_regionWidth != width || capture.m_regionHeight != height) {
-        capture = ScreenCapture(width, height);
+        capture.m_regionWidth = width;
+        capture.m_regionHeight = height;
+        capture.initDXGI();
     }
     return capture;
 }
@@ -114,9 +116,15 @@ void ScreenCapture::initDXGI() {
     // clang-format off
     DXGI_OUTPUT_DESC outputDesc;
     DXGI_INIT("get output display description", m_output->GetDesc(&outputDesc));
-    auto &[left, top,  right, bottom] = outputDesc.DesktopCoordinates;
-    m_screenWidth  = right  - left;
-    m_screenHeight = bottom - top;
+    // DesktopCoordinates may be DPI-virtualized. Duplication dimensions are pixels
+    // in the image being copied, so cropping and mouse geometry must use these.
+    DXGI_OUTDUPL_DESC duplicationDesc{};
+    m_duplication->GetDesc(&duplicationDesc);
+    m_screenWidth  = static_cast<int>(duplicationDesc.ModeDesc.Width);
+    m_screenHeight = static_cast<int>(duplicationDesc.ModeDesc.Height);
+    if (m_regionWidth <= 0 || m_regionHeight <= 0 ||
+        m_regionWidth > m_screenWidth || m_regionHeight > m_screenHeight)
+        throw std::runtime_error("Capture dimensions must fit within the DXGI display");
     m_region.front  = 0;
     m_region.back   = 1;
     m_region.left   = (m_screenWidth  - m_regionWidth) >> 1;
@@ -143,4 +151,7 @@ void ScreenCapture::initDXGI() {
     // clang-format on
 
     std::cout << "ScreenCapture: " << m_screenWidth << "x" << m_screenHeight << std::endl;
+    std::cout << "Capture region (physical pixels): left=" << m_region.left
+              << " top=" << m_region.top << " width=" << m_regionWidth
+              << " height=" << m_regionHeight << std::endl;
 }

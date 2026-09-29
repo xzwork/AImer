@@ -220,3 +220,42 @@ Options:
     # 运行 AImer-aimlab
     ..\bin\Release\AImer-aimlab.exe -s 0.1
     ```
+
+### Apex / ONNX CUDA 配置
+
+在启动界面选择 `apex` 和本地 `apex_v11s_640.onnx`，Weights 留空。
+也可以使用：
+
+```powershell
+AImer.exe --name apex --model "模型完整路径/apex_v11s_640.onnx" --sensitivity 1.0
+```
+
+`games.yaml` 中 Apex 的配置说明：
+
+- `sensitivity`：实际游戏灵敏度，界面或命令行可以覆盖；已保存的启动界面配置优先。
+- `default_sensitivity` / `pixels_per_circle`：鼠标标定基准，默认分别为 1 和 360 / 0.022；修改游戏灵敏度时只修改 `sensitivity`。
+- `fov`：4:3 基准的实际水平视野角（`70 * cl_fovScale`），默认 110；按游戏配置调整，不是 16:9 显示器实际水平视野角。[计算依据](https://jscalc-blog.com/apex-legends-calculator/)。
+- `aim_fov`：截图像素单位的圆形半径，默认 120；按目标框中心判断。只允许 class 0 参与，其他类别全部忽略。
+- `target_lock_iou`：前后帧检测框重叠匹配阈值，默认 0.2。已有目标匹配成功且在 Aim FOV 内时保持锁定，否则重新选择最近目标。快速移动、遮挡或交叉时可能重新选定目标，这是简单框匹配的限制。
+
+截图与模型输入保持同尺寸，由模型读取；当前模型对应中心 640×640。
+DXGI 使用第一个显卡输出的实际屏幕尺寸；游戏需要显示在该输出，并使用覆盖整个屏幕的原生分辨率。
+鼠标换算采用所配置的视野和灵敏度，不自动识别 ADS/倍镜状态；开镜参数变化时需匹配配置。
+启动时打印输入 Auto 模式、实际成功的鼠标后端和 CUDA 设备编号；CUDA 初始化失败会报错，不静默切换 CPU。
+
+OpenVINO 默认关闭，需要时配置 CMake `-DAIMER_WITH_OPENVINO=ON`。
+ONNX CUDA 运行仍需匹配的 CUDA/cuDNN 运行库及 ONNX Runtime provider DLL；无需直接链接 provider/cuDNN 导入库。
+
+### 鼠标后端更新
+
+默认直接调用 Windows user32.dll 的 SendInput，不经过 IbInputSimulator。
+`AIMER_INPUT_BACKEND=Win32` 显式选择原生 API；`Auto` 保留原有 Ib 自动选择流程，
+`SendInput` 则选择 IbInputSimulator 封装的 SendInput。`AIMER_INPUT_TRACE=1` 开启发送日志。
+运行目录中的 Start-AImer-Win32.cmd 使用原生 API 并开启日志。
+API 返回成功仅代表提交成功，不代表游戏接受该输入。
+
+新增本地/离线测试用 Virtual HID 后端：在程序旁的 `mouse.yaml` 中设置
+`mouse_backend: virtual_hid`。自研 Windows KMDF/VHF 驱动仅支持相对移动，原有
+IbInputSimulator / SendInput 后端继续保留。
+驱动源码、Release 编译、签名、安装/卸载与独立测试见
+[Virtual HID 使用说明](drivers/VirtualHidMouse/README.md)。

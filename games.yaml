@@ -1,3 +1,17 @@
+apex:
+  mouse_speed: 1.0
+  default_sensitivity: 1.0
+  sensitivity: 1.0
+  # Actual horizontal FOV at 4:3 (70 * cl_fovScale), not desktop HFOV.
+  fov: 110.0
+  # Radius in capture pixels; only enemy box centers inside this circle qualify.
+  aim_fov: 120.0
+  target_lock_iou: 0.2
+  # Mouse counts per full turn at default_sensitivity (360 / 0.022).
+  pixels_per_circle: 16363.636
+  targets:
+    - enemy
+
 valorant:
   mouse_speed: 1.8
   default_sensitivity: 0.1

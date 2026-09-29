@@ -23,7 +23,7 @@ public:
     T **ptrAddress() { return &m_ptr; }
     void **voidPtrAddress() { return reinterpret_cast<void **>(&m_ptr); }
 
-    void release() { if (m_ptr) m_ptr->Release(); }
+    void release() { if (m_ptr) { m_ptr->Release(); m_ptr = nullptr; } }
 
     auto operator->() const { return m_ptr; }
 };
@@ -34,13 +34,14 @@ public:
 
     bool CaptureFrame(cv::Mat &frame);
 
+    [[nodiscard]] int getWidth() const { return m_screenWidth; }
+    [[nodiscard]] int getHeight() const { return m_screenHeight; }
+
 private:
     explicit ScreenCapture(int regionWidth, int regionHeight);
 
     ~ScreenCapture() = default;
 
-    [[nodiscard]] int getWidth() const { return m_screenWidth; }
-    [[nodiscard]] int getHeight() const { return m_screenHeight; }
 
 private:
     int m_screenWidth = 0, m_screenHeight = 0;

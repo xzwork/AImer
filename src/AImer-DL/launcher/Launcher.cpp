@@ -5,18 +5,25 @@ Complete license text located at repository root LICENSE file
 https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include <iostream>
+#include <algorithm>
 #include <unordered_map>
+#include <cmath>
+#include <chrono>
+#include <fstream>
+#include <array>
+#include <limits>
 
 #include <CLI/CLI.hpp>
 
 #include "../Games.hpp"
 #include "Launcher.hpp"
 #include "../detector/OnnxDetector.hpp"
+#ifdef AIMER_WITH_OPENVINO
 #include "../detector/OpenvinoDetector.hpp"
+#endif
+#include "controller/MouseController.hpp"
 #include "capture/ScreenCapture.hpp"
-#include "../autoAim.h"
-
-static constexpr int CAPTURE_SIZE = 640;
+#include "../AutoAim.h"
 
 class Timer {
 private:
@@ -114,7 +121,7 @@ bool Launcher::validateAndLaunch() {
     try {
         size_t pos = 0;
         sensitivity = std::stof(sensitivityStr, &pos);
-        if (pos != sensitivityStr.size() || sensitivity <= 0.0f)
+        if (pos != sensitivityStr.size() || !std::isfinite(sensitivity) || sensitivity <= 0.0f)
             return updateStatus("Sensitivity must be a positive number", true), false;
     } catch (...) { return updateStatus("Invalid sensitivity format", true), false; }
 
@@ -124,6 +131,13 @@ bool Launcher::validateAndLaunch() {
         return updateStatus("Model file does not exist: " + modelPath, true), false;
     if (!weightsPath.empty() && !std::filesystem::exists(weightsPath))
         return updateStatus("Weights file does not exist: " + weightsPath, true), false;
+#ifndef AIMER_WITH_OPENVINO
+    if (!weightsPath.empty())
+        return updateStatus("OpenVINO is disabled in this build; select an ONNX model", true), false;
+#endif
+    if (getCurrentGameName() == "apex" &&
+        (!weightsPath.empty() || std::filesystem::path(modelPath).extension() != ".onnx"))
+        return updateStatus("Apex requires an ONNX model with CUDA", true), false;
 
     args.gameName = getCurrentGameName();
     args.target = getCurrentGameTargets()[selectedTarget];
@@ -218,16 +232,15 @@ void Launcher::cleanup() {
 
 void Launcher::launchFromArgs(const int argc, const char **argv) {
     CLI::App app{"AImer - AI Aim Assistant"};
+    app.add_flag("--diagnostics", args.diagnostics, "Preview detections and log counts without mouse input");
     app.add_option("-n,--name", args.gameName, "Game name")
             ->required()
             ->check([&](const std::string &str) {
                 for (const auto &n: m_allGameNames) if (n == str) return std::string{};
                 return "Unknown game: " + str;
             });
-    app.add_option("-t,--target", args.target, "Target name")
-            ->required();
-    app.add_option("-s,--sensitivity", args.sensitivity, "Mouse sensitivity")
-            ->required();
+    app.add_option("-t,--target", args.target, "Target name (Apex always uses enemy/class 0)");
+    auto *sensitivityOption = app.add_option("-s,--sensitivity", args.sensitivity, "Mouse sensitivity");
     app.add_option("-m,--model", args.modelPath, "Model path (.xml/.onnx)")
             ->required()->check(CLI::ExistingFile);
     app.add_option("-w,--weights", args.weightsPath, "Weights path (.bin), use OpenVINO when provided")
@@ -238,6 +251,14 @@ void Launcher::launchFromArgs(const int argc, const char **argv) {
         std::cout << app.help() << std::endl;
         std::exit(0);
     }
+    const auto &settings = Games::instance().getSettings(args.gameName);
+    if (sensitivityOption->count() == 0) args.sensitivity = settings.sensitivity;
+    if (!std::isfinite(args.sensitivity) || args.sensitivity <= 0)
+        throw std::invalid_argument("Sensitivity must be a finite positive number");
+    if (settings.name == "apex") args.target = "enemy";
+    else if (std::find(settings.targets.begin(), settings.targets.end(), args.target) == settings.targets.end())
+        throw std::invalid_argument("Select a valid target for " + args.gameName);
+    shouldLaunch = true;
 }
 
 void Launcher::launchFromGUI() {
@@ -321,6 +342,8 @@ void Launcher::init(const int argc, const char **argv) {
 
     Games::instance().loadFromFile(args.exeDir / "games.yaml");
     m_allGameNames = Games::instance().gameNames();
+    if (m_allGameNames.empty()) throw std::runtime_error("No games configured");
+    sensitivityStr = std::to_string(Games::instance().getSettings(m_allGameNames.front()).sensitivity);
 
     if (argc > 1) {
         launchFromArgs(argc, argv);
@@ -333,34 +356,131 @@ void Launcher::updateStatus(const std::string &msg, const bool isError) {
 }
 
 [[noreturn]] void Launcher::launchAutoAim() {
+    if (args.gameName == "apex" &&
+        (!args.weightsPath.empty() || std::filesystem::path(args.modelPath).extension() != ".onnx"))
+        throw std::invalid_argument("Apex requires an ONNX model with CUDA");
     Detector::Detection detection;
     std::unique_ptr<Detector> detector;
     if (args.weightsPath.empty()) {
         detector = std::make_unique<OnnxDetector>(args.modelPath);
     } else {
+#ifdef AIMER_WITH_OPENVINO
         detector = std::make_unique<OpenvinoDetector>
                 (args.modelPath, args.weightsPath, "CPU");
+#else
+        throw std::runtime_error("OpenVINO is disabled; rebuild with AIMER_WITH_OPENVINO=ON");
+#endif
     }
 
     const GameSettings settings = Games::instance().getSettings(args.gameName);
 
     cv::Mat frame;
-    ScreenCapture &capture = ScreenCapture::getInstance(640, 640);
+    ScreenCapture &capture = ScreenCapture::getInstance(detector->getInputWidth(), detector->getInputHeight());
+    if (!args.diagnostics) MouseController::getInstance();
 
     std::cout << "AImer starting..." << std::endl;
     std::cout << "  Game:        " << args.gameName << std::endl;
     std::cout << "  Target:      " << args.target << std::endl;
     std::cout << "  Sensitivity: " << args.sensitivity << std::endl;
     std::cout << "  Model:       " << args.modelPath << std::endl;
+    std::cout << "  Capture:     " << detector->getInputWidth() << "x" << detector->getInputHeight() << std::endl;
+    if (settings.name == "apex")
+        std::cout << "  Aim radius:  " << settings.aim_fov << " px; FOV (4:3): " << settings.fov << std::endl;
     if (!args.weightsPath.empty())
         std::cout << "  Weights:     " << args.weightsPath << std::endl;
 
+    const std::string previewName = "AImer diagnostics - NO MOUSE - Q/Esc: quit, S: save";
+    std::ofstream diagnosticLog;
+    if (args.diagnostics) {
+        diagnosticLog.open(args.exeDir / "diagnostics.log", std::ios::trunc);
+        if (!diagnosticLog) throw std::runtime_error("Cannot write diagnostics.log beside AImer.exe");
+        std::cout << "Diagnostics ON: mouse input disabled. Confidence threshold: 0.6. Log: "
+                  << (args.exeDir / "diagnostics.log") << std::endl;
+        diagnosticLog << "Model=" << args.modelPath << " screen=" << capture.getWidth() << 'x' << capture.getHeight()
+                      << " capture=" << detector->getInputWidth() << 'x' << detector->getInputHeight()
+                      << " confidence=0.6 aim_radius=" << settings.aim_fov << " mouse=DISABLED\n";
+        cv::namedWindow(previewName, cv::WINDOW_NORMAL);
+        cv::resizeWindow(previewName, 640, 640);
+        cv::moveWindow(previewName, 0, 0);
+    }
+    auto lastDiagnostic = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+    auto lastFrame = std::chrono::steady_clock::now();
+    auto lastCaptureWarning = lastFrame;
     Timer timer;
     while (true) {
-        if (!capture.CaptureFrame(frame)) continue;
+        if (!capture.CaptureFrame(frame)) {
+            if (args.diagnostics) {
+                const auto now = std::chrono::steady_clock::now();
+                if (now - lastFrame >= std::chrono::seconds(2) && now - lastCaptureWarning >= std::chrono::seconds(2)) {
+                    std::cout << "[diag] No new DXGI frame for 2 seconds" << std::endl;
+                    diagnosticLog << "[diag] No new DXGI frame for 2 seconds\n" << std::flush;
+                    lastCaptureWarning = now;
+                }
+                const int key = cv::waitKey(1) & 0xff;
+                if (key == 27 || key == 'q' || cv::getWindowProperty(previewName, cv::WND_PROP_VISIBLE) < 1) {
+                    diagnosticLog.close();
+                    cv::destroyAllWindows();
+                    std::exit(0);
+                }
+            }
+            continue;
+        }
+        lastFrame = std::chrono::steady_clock::now();
 
         detector->infer(frame, detection);
-        autoAim(detection, CAPTURE_SIZE / 2, CAPTURE_SIZE / 2, settings, args.target, args.sensitivity);
+        if (args.diagnostics) {
+            cv::Mat preview = frame.clone();
+            const cv::Point center(frame.cols / 2, frame.rows / 2);
+            std::array<int, 4> counts{};
+            int inside = 0;
+            float bestEnemyScore = 0.0f;
+            float nearest = (std::numeric_limits<float>::max)();
+            for (const int id : detection.valid) {
+                const int label = detection.label_id[id];
+                if (label >= 0 && label < static_cast<int>(counts.size())) ++counts[label];
+                const auto &box = detection.boxes[id];
+                const float distance = std::hypot(box.x + box.width * 0.5f - center.x,
+                                                  box.y + box.height * 0.5f - center.y);
+                const bool inFov = label == 0 && box.width > 0 && box.height > 0 && distance <= settings.aim_fov;
+                if (label == 0) {
+                    bestEnemyScore = (std::max)(bestEnemyScore, detection.confidences[id]);
+                    nearest = (std::min)(nearest, distance);
+                    if (inFov) ++inside;
+                }
+                const cv::Scalar color = inFov ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 165, 255);
+                cv::rectangle(preview, box, color, 2);
+                cv::putText(preview, cv::format("class %d %.2f", label, detection.confidences[id]),
+                            cv::Point((std::max)(0, box.x), (std::max)(18, box.y)),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
+            }
+            cv::circle(preview, center, static_cast<int>(settings.aim_fov), cv::Scalar(255, 255, 0), 1);
+            cv::drawMarker(preview, center, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, 16, 1);
+            const std::string summary = cv::format("c0=%d c1=%d c2=%d c3=%d inFov=%d", counts[0], counts[1], counts[2], counts[3], inside);
+            cv::putText(preview, summary, cv::Point(8, 22), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 255), 1);
+            cv::putText(preview, "NO MOUSE INPUT", cv::Point(8, 44), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 255), 1);
+            cv::imshow(previewName, preview);
+            if (lastFrame - lastDiagnostic >= std::chrono::seconds(1)) {
+                const auto line = "[diag] " + summary + cv::format(" preNms=%d maxEnemy=%.3f nearest=%.1f mouse=DISABLED",
+                    static_cast<int>(detection.boxes.size()), bestEnemyScore, counts[0] ? nearest : -1.0f);
+                std::cout << line << std::endl;
+                diagnosticLog << line << '\n' << std::flush;
+                lastDiagnostic = lastFrame;
+            }
+            const int key = cv::waitKey(1) & 0xff;
+            if (key == 's') {
+                cv::imwrite((args.exeDir / "diagnostic-capture.png").string(), frame);
+                cv::imwrite((args.exeDir / "diagnostic-preview.png").string(), preview);
+                std::cout << "Saved diagnostic-capture.png and diagnostic-preview.png" << std::endl;
+            }
+            if (key == 27 || key == 'q' || cv::getWindowProperty(previewName, cv::WND_PROP_VISIBLE) < 1) {
+                diagnosticLog.close();
+                cv::destroyAllWindows();
+                std::exit(0);
+            }
+        } else {
+            autoAim(detection, frame.cols / 2, frame.rows / 2, settings, args.target, args.sensitivity,
+                    capture.getWidth(), capture.getHeight());
+        }
 
         timer.finish();
     }

@@ -24,6 +24,7 @@ public:
         std::string modelPath;
         std::string weightsPath;
         std::filesystem::path exeDir;
+        bool diagnostics = false;
     };
 
 private:

@@ -6,6 +6,8 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 #include "OnnxDetector.hpp"
 #include <numeric>
+#include <array>
+#include <filesystem>
 
 void OnnxDetector::initInputInfo() {
     if (m_session->GetInputCount() != 1) {
@@ -28,6 +30,9 @@ void OnnxDetector::initInputInfo() {
         std::cerr << message << std::endl;
         throw std::runtime_error(message);
     }
+    if (m_inputDims[0] != 1 || m_inputDims[1] != 3 || m_inputDims[2] <= 0 || m_inputDims[3] <= 0 ||
+        m_session->GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetElementType() != ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT)
+        throw std::runtime_error("Expected static FP32 input [1,3,H,W]");
 
     // Print input node name and input tensor shape
     input_h = static_cast<int>(m_inputDims[2]);
@@ -78,13 +83,14 @@ OnnxDetector::OnnxDetector(const std::string &model_path,
     : Detector(conf_threshold, nms_threshold) {
     // Configure session
     m_sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
-    OrtSessionOptionsAppendExecutionProvider_CUDA(m_sessionOptions, 0);
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(m_sessionOptions, 0));
+    std::cout << "Inference provider: ONNX Runtime CUDA, device 0, FP32, batch=1" << std::endl;
 
     // Create environment object
     // Set logging level: Error
     // Session log identifier: onnx_detector
     m_ortEnv = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "onnx_detector");
-    const auto modelPath_w = std::wstring(model_path.begin(), model_path.end());
+    const auto modelPath_w = std::filesystem::path(model_path).wstring();
     m_session = std::make_unique<Ort::Session>(m_ortEnv, modelPath_w.c_str(), m_sessionOptions);
 
     // Initialize model input and output formats
@@ -92,10 +98,7 @@ OnnxDetector::OnnxDetector(const std::string &model_path,
     initOutputInfo();
 }
 
-OnnxDetector::~OnnxDetector() {
-    m_session->release();
-    m_sessionOptions.release();
-}
+OnnxDetector::~OnnxDetector() = default;
 
 void OnnxDetector::infer(const cv::Mat &frame, Detection &detection) {
     // Image preprocessing
@@ -104,8 +107,8 @@ void OnnxDetector::infer(const cv::Mat &frame, Detection &detection) {
                                           cv::Scalar(0, 0, 0), true, false);
 
     // Input and output node names saved as arrays
-    static const std::array<const char *, 1> inputNames{m_inputNodeName.c_str()};
-    static const std::array<const char *, 1> outputNames{m_outputNodeName.c_str()};
+    const std::array<const char *, 1> inputNames{m_inputNodeName.c_str()};
+    const std::array<const char *, 1> outputNames{m_outputNodeName.c_str()};
     static const auto allocator_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeDefault);
 
     // Create input tensor
